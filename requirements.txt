@@ -1,1 +1,4 @@
-pushbullet.py==0.9.1
+pushbullet.py
+requests
+firebase-admin
+apscheduler

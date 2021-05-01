@@ -1,8 +1,13 @@
-import pushbullet
 import requests
 import datetime 
 import pickle
+
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import db
+
 from pushbullet import Pushbullet
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 API_KEY = "o.H17b0gbBoeSGHBJQDuE9i7bC6DWSQinU"
 
@@ -160,13 +165,14 @@ class PushBullet:
         return None        
 
 class CronJob:
-    def __init__(self, data):
-        self.data = data
+    def __init__(self, ):
         self.cowinParser=CowinParser()
         self.pushBullet = PushBullet()
+        self.firebasepull = Firebasepull()
         return
     def execute_one_check(self):
-        for each in data:
+        self.data = self.firebasepull.pull_data()
+        for each in self.data:
             email = each['email']
             print("Begin searching for ",email)
             searchBy = each["searchBy"]
@@ -195,37 +201,23 @@ class CronJob:
                     print(" No Vaccination centres for ", email)
                     continue
                 msg_body = ''
-                msg_title = 'Vaccination centres found'
+                msg_title = 'Vaccination centres found at ' + district
                 for centre in vaccentreList:
                     msg_body+= centre.format_data()
                 self.pushBullet.send_msg_to_contact(email, msg_title, msg_body)
-data = [
-    {
-        "email": "gokulav2@gmail.com",
-        "searchBy": "district",
-        "district": "kollam",
-        "state" : "kerala",
-        "youngonly" : False
-    },
-    {
-        "email": "gokulagencies2@gmail.com",
-        "searchBy": "district",
-        "district": "Pune",
-        "state" : "Maharashtra",
-        "youngonly": True
-    }
-]
 
-# p = PushBullet()
-# p.push('test', 'thisisatest')
-# print(p.send_msg_to_contact('gokulav2@gmail.com'))
-c = CronJob(data)
+class Firebasepull:
+    def __init__(self):
+        cred = credentials.Certificate(r"C:\Users\gokul\Desktop\program_files\CowinCron\cowincron-7fe94cb499c6.json")
+        firebase_admin.initialize_app(cred, {'databaseURL': "https://cowincron-default-rtdb.asia-southeast1.firebasedatabase.app/"})  
+        return
+    def pull_data(self):
+        ref = db.reference('users')
+        return(ref.get())
+
+c = CronJob()
 c.execute_one_check()
-# c.read_state_dict()
-# a = c.get_states_dict()
-# b = c.get_state_to_district_dict()
-# d = c.get_total_district_dict()
-# print(a['kerala'])
-# print(b[17])
-# print(d[305])
-# print(a)
+
+scheduler = BlockingScheduler()
+scheduler.add_job(c.execute_one_check, 'interval', minutes=30)
+scheduler.start()
