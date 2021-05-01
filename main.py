@@ -1,6 +1,8 @@
 import requests
 import datetime 
 import pickle
+import os
+import json
 
 import firebase_admin
 from firebase_admin import credentials
@@ -8,8 +10,6 @@ from firebase_admin import db
 
 from pushbullet import Pushbullet
 from apscheduler.schedulers.blocking import BlockingScheduler
-
-API_KEY = "o.H17b0gbBoeSGHBJQDuE9i7bC6DWSQinU"
 
 class CowinParser:
     def __init__(self):
@@ -143,9 +143,10 @@ class VaccinationCentreList:
                 break
     def getVaccinationCentreList(self):
         return self.VaccinationCentreList
+
 class PushBullet:
     def __init__(self):
-        self.pb = Pushbullet(API_KEY)
+        self.pb = Pushbullet(os.environ.get('PUSHBULLET_MEC_API'))
         self.contacts = self.pb.chats
         return
     def push(self, title, body):
@@ -208,7 +209,12 @@ class CronJob:
 
 class Firebasepull:
     def __init__(self):
-        cred = credentials.Certificate(r"C:\Users\gokul\Desktop\program_files\CowinCron\cowincron-7fe94cb499c6.json")
+        credential_1 = os.environ.get('COWINCRON_CRED_1')
+        credential_2 = os.environ.get('COWINCRON_CRED_2')
+        credential_1 = json.loads(credential_1)
+        credential_2 = json.loads(credential_2)
+        credential_1.update(credential_2)
+        cred = credentials.Certificate(credential_1)
         firebase_admin.initialize_app(cred, {'databaseURL': "https://cowincron-default-rtdb.asia-southeast1.firebasedatabase.app/"})  
         return
     def pull_data(self):
