@@ -11,8 +11,13 @@ from firebase_admin import db
 from pushbullet import Pushbullet
 from apscheduler.schedulers.blocking import BlockingScheduler
 
+
 class CowinParser:
     def __init__(self):
+        # https_proxy = "https://103.146.176.124:80"
+        # self.proxyDict = { 
+        #             "https" : https_proxy, 
+        #             }
         if not self.read_state_dict():
             self.process_states() 
         print("No of states: ", len(self.states_dict))
@@ -26,7 +31,10 @@ class CowinParser:
     def get_centres_by_calendarBydistrict(self, district_id, date=datetime.datetime.now().strftime('%d-%m-%Y')):
         url = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id="
         tail = str(district_id)+"&date="+str(date)
-        resp = requests.get(url + tail, self.HEADERS)
+        resp = requests.get(url + tail, headers= self.HEADERS)
+        if resp.status_code!=200:
+            print('URL REQUEST FAIL.CODE: ',resp.status_code)
+            return []
         self.data = resp.json()
         print("No of centres: ", len(self.data["centers"]))
         self.centres = self.data["centers"]
@@ -34,6 +42,9 @@ class CowinParser:
     def process_states(self):
         url = "https://cdn-api.co-vin.in/api/v2/admin/location/states"
         resp = requests.get(url)
+        if resp.status_code!=200:
+            print('URL REQUEST FAIL.CODE: ',resp.status_code)
+            return False
         states = resp.json()['states']
         self.states_dict = {}
         for state in states:
@@ -48,6 +59,9 @@ class CowinParser:
         for state_name in self.states_dict:
             state_code = self.states_dict[state_name]
             resp = requests.get(url+str(state_code))
+            if resp.status_code!=200:
+                print('URL REQUEST FAIL.CODE: ',resp.status_code)
+                return False
             districts = resp.json()['districts']
             self.district_dict = {}
             print("getting district list for statecode" ,state_code)
@@ -163,16 +177,18 @@ class PushBullet:
         for contact in self.contacts:
             if contact.email==email:
                 return contact
-        return None        
+        contact = self.pb.new_chat("NEW", email)
+        self.pb.push_note('Registered to COWIN Cron Service', 'You will receive notifs if vaccine slots if any are found.', chat=contact)
+        return contact        
 
 class CronJob:
     def __init__(self, ):
         self.cowinParser=CowinParser()
         self.pushBullet = PushBullet()
-        self.firebasepull = Firebasepull()
+        self.firebaseOperations = FirebaseOperations()
         return
     def execute_one_check(self):
-        self.data = self.firebasepull.pull_data()
+        self.data = self.firebaseOperations.pull_data()
         for each in self.data:
             email = each['email']
             print("Begin searching for ",email)
@@ -200,14 +216,17 @@ class CronJob:
                 vaccentreList = vaccinationCentreList.getVaccinationCentreList()
                 if vaccentreList == []:
                     print(" No Vaccination centres for ", email)
+                    self.firebaseOperations.push_last_msg(email, "No Vaccination centres", '')
                     continue
                 msg_body = ''
                 msg_title = 'Vaccination centres found at ' + district
                 for centre in vaccentreList:
                     msg_body+= centre.format_data()
+                self.firebaseOperations.push_last_msg(email, msg_title, msg_body)
+                
                 self.pushBullet.send_msg_to_contact(email, msg_title, msg_body)
 
-class Firebasepull:
+class FirebaseOperations:
     def __init__(self):
         credential_1 = os.environ.get('COWINCRON_CRED_1')
         credential_2 = os.environ.get('COWINCRON_CRED_2')
@@ -217,6 +236,17 @@ class Firebasepull:
         cred = credentials.Certificate(credential_1)
         firebase_admin.initialize_app(cred, {'databaseURL': "https://cowincron-default-rtdb.asia-southeast1.firebasedatabase.app/"})  
         return
+    def push_last_msg(self,email, title, body):
+        ref = db.reference('users')  
+        a= ref.order_by_child("email").equal_to(email).get()
+        key = int(next(iter(a)))
+        dt = datetime.datetime.now(datetime.timezone.utc)
+        utc_time = dt.replace(tzinfo=datetime.timezone.utc)
+        utc_timestamp = utc_time.timestamp()
+        ref.child(str(key)).update({"last_msg_title":title,
+                            "last_msg_body":body,
+                            "last_msg_time":utc_timestamp})                                               
+        return                                                            
     def pull_data(self):
         ref = db.reference('users')
         return(ref.get())
