@@ -1,3 +1,4 @@
+import pushbullet
 import requests
 import datetime 
 import pickle
@@ -97,33 +98,43 @@ class CowinParser:
         return did
 
 class VaccinationCentre:
-    def __init__(self, centre_id, name, district_name, available_capacity, min_age_limit, vaccine, date):
-        self.centre_id = centre_id
-        self. name = name
-        self. district_name = district_name
-        self. available_capacity = available_capacity
-        self. min_age_limit = min_age_limit
-        self. vaccine = vaccine
-        self. date = date
+    def __init__(self, centre_id, name, district_name, available_capacity, min_age_limit, vaccine, date, pincode):
+        self.centre_id = str(centre_id)
+        self.name = str(name)
+        self.district_name = str(district_name)
+        self.available_capacity = str(available_capacity)
+        self.min_age_limit = str(min_age_limit)
+        self.vaccine = str(vaccine)
+        self.date = str(date)
+        self.pincode = str(pincode)
+        return
+    def format_data(self):
+        txt = self.available_capacity + ' slots available at ' + self.name +' on '+ self.date +' at ' + self.pincode+'.\n'
+        print(txt)
+        return txt
+
 
 class VaccinationCentreList:
     def __init__(self):
         self.VaccinationCentreList = []
     
-    def process(self, centres):
+    def process(self, centres, youngOnly):
         self.VaccinationCentreList = []
         for centre in centres:
             centre_id = centre["center_id"]
             name = centre["name"]
             district_name = centre["district_name"]
+            pincode = centre['pincode']
             for session in centre["sessions"]:
                 available_capacity = session["available_capacity"]
                 if available_capacity<=0:
                     continue
                 min_age_limit = session["min_age_limit"]
+                if youngOnly and min_age_limit>=45:
+                    continue
                 vaccine = session["vaccine"]
                 date = session['date']
-                self.VaccinationCentreList.append( VaccinationCentre(centre_id, name, district_name, available_capacity, min_age_limit, vaccine, date))
+                self.VaccinationCentreList.append( VaccinationCentre(centre_id, name, district_name, available_capacity, min_age_limit, vaccine, date, pincode))
                 break
     def getVaccinationCentreList(self):
         return self.VaccinationCentreList
@@ -152,11 +163,17 @@ class CronJob:
     def __init__(self, data):
         self.data = data
         self.cowinParser=CowinParser()
+        self.pushBullet = PushBullet()
+        return
     def execute_one_check(self):
         for each in data:
             email = each['email']
             print("Begin searching for ",email)
             searchBy = each["searchBy"]
+            if each["youngonly"]:
+                youngOnly=True
+            else:
+                youngOnly=False    
             if searchBy=="district":
                 district = each['district']
                 state = each['state']
@@ -172,20 +189,30 @@ class CronJob:
                     continue
                 centres = self.cowinParser.get_centres_by_calendarBydistrict(district_id)
                 vaccinationCentreList = VaccinationCentreList()
-                vaccinationCentreList.process(centres)
-                centreList = vaccinationCentreList.getVaccinationCentreList()
+                vaccinationCentreList.process(centres, youngOnly)
+                vaccentreList = vaccinationCentreList.getVaccinationCentreList()
+                if vaccentreList == []:
+                    print(" No Vaccination centres for ", email)
+                    continue
+                msg_body = ''
+                msg_title = 'Vaccination centres found'
+                for centre in vaccentreList:
+                    msg_body+= centre.format_data()
+                self.pushBullet.send_msg_to_contact(email, msg_title, msg_body)
 data = [
     {
         "email": "gokulav2@gmail.com",
         "searchBy": "district",
         "district": "kollam",
-        "state" : "kerala"
+        "state" : "kerala",
+        "youngonly" : False
     },
     {
         "email": "gokulagencies2@gmail.com",
         "searchBy": "district",
         "district": "Pune",
-        "state" : "Maharashtra"
+        "state" : "Maharashtra",
+        "youngonly": True
     }
 ]
 
