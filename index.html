@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
+    <title>Under45.in</title>
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel=" stylesheet " href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css ">
+
+    <!-- FIREBASE -->
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-database.js"></script>
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        
+        main {
+            flex: 1 0 auto;
+        }
+        
+        body {
+            background: #fff;
+        }
+        
+        .input-field input[type=date]:focus+label,
+        .input-field input[type=text]:focus+label,
+        .input-field input[type=email]:focus+label,
+        .input-field input[type=password]:focus+label {
+            color: #e91e63;
+        }
+        
+        .input-field input[type=date]:focus,
+        .input-field input[type=text]:focus,
+        .input-field input[type=email]:focus,
+        .input-field input[type=password]:focus {
+            border-bottom: 2px solid #e91e63;
+            box-shadow: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="section "></div>
+    <main>
+        <center>
+            <h4 class="indigo-text ">Under45.in</h4>
+            <div class="section ">
+            </div>
+
+            <h5 class="indigo-text " id='welcome_text'>Please, login with your google account</h5>
+            <div class="section "></div>
+            <div class="container ">
+                <div class="z-depth-1 grey lighten-4 row " style="display: inline-block; padding: 32px 48px 0px 48px; border: 1px solid #EEE; width:75% " id="login_div">
+                    <div class="col s12 ">
+                        <center>
+                            <div class='row'>
+                                <button type='submit' class='col s12 btn btn-large waves-effect indigo' onclick="googleLogin()">Login with Google</button>
+                            </div>
+                        </center>
+                    </div>
+                </div>
+
+                <div class="z-depth-1 grey lighten-4 row " style="display: none; padding: 32px 48px 0px 48px; border: 1px solid #EEE; width: 75% " id="selection_div">
+
+                    <div class="col s12 ">
+                        <div class='row'>
+                            <div class='col s12'>
+                            </div>
+                        </div>
+
+                        <div class='row'>
+                            <div class='input-field col s12'>
+                                <p>
+                                    <label>
+                                  <input name="group1" type="radio" checked value=1 onclick="change_box_display(this.value)" />
+                                  <span>By district</span>
+                                </label>
+
+                                    <label>
+                                  <input name="group1" type="radio" value=2 onclick="change_box_display(this.value)"/>
+                                  <span>By pincode</span>
+                                </label>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class='row' id='state_sel_div'>
+                            <div class="input-field col s12 ">
+                                <select id="state_sel">
+                                    <option value=" " disabled selected>Choose the state</option>
+                                    </select>
+                                <label>State Select</label>
+                            </div>
+                        </div>
+                        <div class='row' id='district_sel_div'>
+                            <div class="input-field col s12 ">
+                                <select id="district_sel">
+                              <option value=" " disabled selected>Choose the district</option>
+                            </select>
+                                <label>District Select</label>
+                            </div>
+                        </div>
+                        <div class='row' id='pincode_sel_div' style="display:none;">
+                            <div class='input-field col s12'>
+                                <input class='validate' type='text' name='text' id='text' />
+                                <label>Enter the pincode</label>
+                            </div>
+                        </div>
+                        <p>
+                            <label>
+                                      <input type="checkbox" id="under45_checkbox"/>
+                                      <span>Under 45 only</span>
+                                    </label>
+                        </p>
+
+                        <br />
+                        <center>
+                            <div class='row'>
+                                <button type='submit' class='col s12 btn btn-large waves-effect indigo' onclick=submit()>Submit</button>
+                            </div>
+                        </center>
+                    </div>
+                </div>
+                <div class="z-depth-1 grey lighten-4 row " style="display: inline-block; padding: 32px 48px 0px 48px; border: 1px solid #EEE; width:75% " id="login_div">
+                    <div class="col s12 ">
+                        <center>
+                            <div class='row'>
+
+                            </div>
+                        </center>
+                    </div>
+                </div>
+            </div>
+            </div>
+            <!-- <a href="#! ">Create account</a> -->
+        </center>
+
+        <div class="section "></div>
+        <div class="section "></div>
+    </main>
+    <script type="text/javascript " src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.1/jquery.min.js "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js "></script>
+    <script>
+        var elem = $('.tabs')
+        var options = {}
+        var instance = M.Tabs.init(elem, options);
+        M.AutoInit();
+
+        window.onload = function() {
+
+        }
+
+        function change_box_display(type) {
+            if (type == 1) {
+                document.getElementById('pincode_sel_div').style.display = 'none'
+                document.getElementById('state_sel_div').style.display = 'inherit'
+                document.getElementById('district_sel_div').style.display = 'inherit'
+            } else {
+                document.getElementById('pincode_sel_div').style.display = 'inherit'
+                document.getElementById('state_sel_div').style.display = 'none'
+                document.getElementById('district_sel_div').style.display = 'none'
+            }
+        }
+
+        var firebaseConfig = {
+            apiKey: "AIzaSyBJexTWpuprckWhAHsWG_W__vw2Ch4wwlM",
+            authDomain: "cowincron.firebaseapp.com",
+            databaseURL: "https://cowincron-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "cowincron",
+            // storageBucket: "cowincron.appspot.com",
+            // messagingSenderId: "1010981711077",
+            // appId: "1:845782377328:web:a01406c39d8f56ced365b5"
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE)
+
+        firebase.auth().getRedirectResult().then(function(result) {
+            if (result.credential) {
+                // This gives you a Google Access Token. You can use it to access the Google API.
+                var token = result.credential.accessToken;
+                console.log('LOGIN SUCCESS_2');
+                var user = result.user;
+                firebase.database().ref('usersf/' + user['uid']).update({
+                    displayName: user['displayName'],
+                    email: user['email'],
+                    'data/last_login_time': firebase.database.ServerValue.TIMESTAMP,
+                }, (error) => {
+                    if (error) {
+                        console.log('glogin write fail_2')
+                            // The write failed...
+                    } else {
+                        console.log('glogin write success_2')
+                            // Data saved successfully!
+                    }
+                    // The signed-in user info.
+                });
+            }
+        }).catch(function(error) {
+            // Handle Errors here.
+            var errorCode = error.code;
+            var errorMessage = error.message;
+            // The email of the user's account used.
+            var email = error.email;
+            // The firebase.auth.AuthCredential type that was used.
+            var credential = error.credential;
+        });
+
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (user) {
+                console.log('already logged in user')
+                firebase.database().ref('usersf/' + user['uid']).update({
+                    'last_login': firebase.database.ServerValue.TIMESTAMP,
+                })
+                loginPostRun()
+            } else {
+                console.log('not already logged in user')
+                    // No user is signed in.
+            }
+        });
+
+        function googleLogin() {
+            var provider = new firebase.auth.GoogleAuthProvider();
+            if (detectMob()) {
+                firebase.auth().signInWithRedirect(provider);
+            } else {
+                console.log('PC GOOGLE LOGIN');
+                firebase.auth().signInWithPopup(provider).then(function(result) {
+                    // This gives you a Google Access Token. You can use it to access the Google API.
+                    var token = result.credential.accessToken;
+                    // The signed-in user info.
+                    var user = result.user;
+                    console.log('LOGIN SUCCESS');
+                    firebase.database().ref('usersf/' + user['uid']).update({
+                        displayName: user['displayName'],
+                        email: user['email'],
+                        'last_login_time': firebase.database.ServerValue.TIMESTAMP,
+                    }, (error) => {
+                        if (error) {
+                            console.log('glogin write fail')
+                                // The write failed...
+                        } else {
+                            console.log('glogin write success')
+                                // Data saved successfully!
+                        }
+                    });
+                }).catch(function(error) {
+                    // Handle Errors here.
+                    var errorCode = error.code;
+                    var errorMessage = error.message;
+                    // The email of the user's account used.
+                    var email = error.email;
+                    // The firebase.auth.AuthCredential type that was used.
+                    var credential = error.credential;
+                    console.log(errorCode + errorMessage)
+                });
+            }
+        }
+
+        function detectMob() {
+            return ((window.innerWidth <= 800) && (window.innerHeight <= 600));
+        }
+
+        function signOut() {
+            firebase.auth().signOut().then(function() {
+                // Sign-out successful.
+                location.reload()
+            }).catch(function(error) {
+                alert(errorCode + errorMessage)
+                    // An error happened.
+            });
+        }
+
+        function loginPostRun() {
+            document.getElementById('login_div').style.display = 'None'
+            document.getElementById('welcome_text').innerHTML = "Select the district/pincode to auto-check."
+            document.getElementById('selection_div').style.display = 'inherit'
+            var state_sel = document.getElementById('state_sel')
+            state_sel.innerHTML = ''
+            option = document.createElement("option");
+            option.setAttribute('value', ' ')
+            option.setAttribute('disabled', 'true')
+            option.setAttribute('selected', 'true')
+            option.text = "Choose the state"
+            state_sel.appendChild(option)
+            firebase.database().ref('states/').once('value').then((snapshot) => {
+                var state_dict = snapshot.val()
+                for (var key in state_dict) {
+                    var option = document.createElement("option");
+                    option.setAttribute('value', state_dict[key])
+                    option.text = key
+                    state_sel.appendChild(option)
+                }
+                var instances = M.FormSelect.init(state_sel, options);
+                state_sel.addEventListener("change", get_districts);
+            });
+        }
+
+        function get_districts() {
+            var state_code = document.getElementById('state_sel').value
+            var district_sel = document.getElementById('district_sel')
+            district_sel.innerHTML = ''
+            option = document.createElement("option");
+            option.setAttribute('value', ' ')
+            option.setAttribute('disabled', 'true')
+            option.setAttribute('selected', 'true')
+            option.text = "Choose the district"
+            district_sel.appendChild(option)
+            firebase.database().ref('state_to_district/' + state_code).once('value').then((snapshot) => {
+                var district_dict = snapshot.val()
+                for (var key in district_dict) {
+                    option = document.createElement("option");
+                    option.setAttribute('value', district_dict[key])
+                    option.text = key
+                    district_sel.appendChild(option)
+                }
+                var instances = M.FormSelect.init(district_sel, options);
+            });
+        }
+
+        function submit() {
+            var value = document.getElementById('district_sel').value;
+            if (value == ' ') {
+                return;
+            }
+            var youngOnly = 'False';
+            if (document.getElementById('under45_checkbox').checked) {
+                youngOnly = 'True';
+            }
+            var ref = firebase.database().ref('usersf/' + firebase.auth().currentUser.uid + '/');
+            console.log('Updating ' + value)
+            ref.update({
+                'district_code': value,
+                'youngOnly': youngOnly,
+            }).then(() => {
+                M.toast({
+                    html: 'Submitted!'
+                })
+            });
+
+
+        }
+    </script>
+</body>
+
+</html>

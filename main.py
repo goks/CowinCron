@@ -32,6 +32,7 @@ class CowinParser:
         url = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id="
         tail = str(district_id)+"&date="+str(date)
         resp = requests.get(url + tail, headers= self.HEADERS)
+        print(url+tail)
         if resp.status_code!=200:
             print('URL REQUEST FAIL.CODE: ',resp.status_code)
             return []
@@ -50,7 +51,7 @@ class CowinParser:
         for state in states:
             self.states_dict[state['state_name'].lower()] = state['state_id']  
         print('Obtained state list') 
-        self.write_state_dict()     
+        self.write_state_dict()    
         return    
     def process_districts(self):
         url = "https://cdn-api.co-vin.in/api/v2/admin/location/districts/"
@@ -76,6 +77,8 @@ class CowinParser:
         with open('./states.sv', 'wb') as handle:
             pickle.dump(self.states_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
             print('write state_dict success')
+        FirebaseOperations().push_states(self.states_dict)
+        return
     def read_state_dict(self):
         try:
             with open('./states.sv', 'rb') as handle:
@@ -89,6 +92,7 @@ class CowinParser:
             pickle.dump(self.state_to_district_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
         with open('./district_2.sv', 'wb') as handle:
             pickle.dump(self.total_district_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)    
+        FirebaseOperations().push_districts(self.state_to_district_dict, self.total_district_dict)
         print('write district_dict success')
     def read_district_dict(self):
         try:
@@ -246,7 +250,17 @@ class FirebaseOperations:
         ref.child(str(key)).update({"last_msg_title":title,
                             "last_msg_body":body,
                             "last_msg_time":utc_timestamp})                                               
-        return                                                            
+        return   
+    def push_states(self,state_dict):
+        ref = db.reference('states')
+        ref.set(state_dict)
+        return   
+    def push_districts(self,state_to_district_dict,total_district_dict ):
+        ref = db.reference('state_to_district')
+        ref.set(state_to_district_dict)
+        ref = db.reference('total_district')
+        ref.set(total_district_dict)
+        return                                                                 
     def pull_data(self):
         ref = db.reference('users')
         return(ref.get())
