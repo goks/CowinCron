@@ -193,42 +193,50 @@ class CronJob:
         return
     def execute_one_check(self):
         self.data = self.firebaseOperations.pull_data()
-        for each in self.data:
+        for key in self.data:
+            each = self.data[key]
             email = each['email']
             print("Begin searching for ",email)
             searchBy = each["searchBy"]
-            if each["youngonly"]:
+            if each["youngOnly"]:
                 youngOnly=True
             else:
                 youngOnly=False    
             if searchBy=="district":
                 district = each['district']
-                state = each['state']
+                # state = each['state']
+                district_id = each['district_code']
             elif searchBy=="pincode":
                 pincode = each['pincode']
             else:
                 print("Invalid searchby tag.Skipping")    
                 continue
+            try:
+                count = each['notification_count']
+            except KeyError:
+                count=0    
             if(searchBy=="district"):
-                district_id = self.cowinParser.get_district_id(state,district)
+                # district_id = self.cowinParser.get_district_id(state,district)
                 if not district_id:
                     print("Keyerror in state/district .Skipping")    
                     continue
                 centres = self.cowinParser.get_centres_by_calendarBydistrict(district_id)
+                no_of_centres = len(centres)
                 vaccinationCentreList = VaccinationCentreList()
                 vaccinationCentreList.process(centres, youngOnly)
                 vaccentreList = vaccinationCentreList.getVaccinationCentreList()
                 if vaccentreList == []:
                     print(" No Vaccination centres for ", email)
-                    self.firebaseOperations.push_last_msg(email, "No Vaccination centres", '')
+                    self.firebaseOperations.push_last_msg(key, email, "No Vaccination centres", '',count, no_of_centres, 0)
                     continue
                 msg_body = ''
                 msg_title = 'Vaccination centres found at ' + district
                 for centre in vaccentreList:
                     msg_body+= centre.format_data()
-                self.firebaseOperations.push_last_msg(email, msg_title, msg_body)
-                
-                self.pushBullet.send_msg_to_contact(email, msg_title, msg_body)
+                count+=1    
+                self.firebaseOperations.push_last_msg(key, email, msg_title, msg_body,count,no_of_centres, len(vaccentreList))
+                status = self.pushBullet.send_msg_to_contact(email, msg_title, msg_body )
+                return
 
 class FirebaseOperations:
     def __init__(self):
@@ -240,16 +248,19 @@ class FirebaseOperations:
         cred = credentials.Certificate(credential_1)
         firebase_admin.initialize_app(cred, {'databaseURL': "https://cowincron-default-rtdb.asia-southeast1.firebasedatabase.app/"})  
         return
-    def push_last_msg(self,email, title, body):
-        ref = db.reference('users')  
-        a= ref.order_by_child("email").equal_to(email).get()
-        key = int(next(iter(a)))
+    def push_last_msg(self,key, email, title, body, count, no_of_centres, open_centres):
+        ref = db.reference('usersf/')  
+        # a= ref.order_by_child("email").equal_to(email).get()
+        # key = int(next(iter(a)))
         dt = datetime.datetime.now(datetime.timezone.utc)
         utc_time = dt.replace(tzinfo=datetime.timezone.utc)
         utc_timestamp = utc_time.timestamp()
         ref.child(str(key)).update({"last_msg_title":title,
                             "last_msg_body":body,
-                            "last_msg_time":utc_timestamp})                                               
+                            "last_msg_time":utc_timestamp,
+                            'notification_count':count,
+                            'total_centres':no_of_centres,
+                            'open_centres':open_centres})                                               
         return   
     def push_states(self,state_dict):
         ref = db.reference('states')
@@ -262,7 +273,8 @@ class FirebaseOperations:
         ref.set(total_district_dict)
         return                                                                 
     def pull_data(self):
-        ref = db.reference('users')
+        ref = db.reference('usersf')
+        # print(ref.get())
         return(ref.get())
 
 c = CronJob()

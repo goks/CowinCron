@@ -131,7 +131,7 @@
                     <div class="col s12 ">
                         <center>
                             <div class='row'>
-                                <table id='history_table'>
+                                <table id='history_table' class="responsive-table">
                                     <thead>
                                         <tr>
                                             <th>District/Pincode</th>
@@ -164,13 +164,13 @@
 
         <div class="section "></div>
         <div class="section "></div>
-        <div id="modal1" class="modal">
+        <div id="modal1" class="modal bottom-sheet">
             <div class="modal-content">
                 <h4 id='modal_header'>Modal Header</h4>
                 <p id='modal_body'>A bunch of text</p>
             </div>
             <div class="modal-footer">
-                <a href="#!" class="modal-close waves-effect waves-green btn-flat">Agree</a>
+                <a href="#!" class="modal-close waves-effect waves-green btn-flat">Dismiss</a>
             </div>
         </div>
     </main>
@@ -209,7 +209,7 @@
         };
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-        // firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE)
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE)
 
         firebase.auth().getRedirectResult().then(function(result) {
             if (result.credential) {
@@ -369,6 +369,7 @@
             var ref = firebase.database().ref('usersf/' + firebase.auth().currentUser.uid + '/');
             console.log('Updating ' + district_code);
             ref.update({
+                'searchBy': 'district',
                 'district': district_name,
                 'district_code': district_code,
                 'youngOnly': youngOnly,
