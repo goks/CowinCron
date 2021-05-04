@@ -4,7 +4,7 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
-    <title>Under45.in</title>
+    <title>CowinCron</title>
 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel=" stylesheet " href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css ">
@@ -49,7 +49,7 @@
     <div class="section "></div>
     <main>
         <center>
-            <h4 class="indigo-text ">Under45.in</h4>
+            <h4 class="indigo-text ">CowinCron</h4>
             <div class="section ">
             </div>
 
@@ -60,7 +60,7 @@
                     <div class="col s12 ">
                         <center>
                             <div class='row'>
-                                <button type='submit' class='col s12 btn btn-large waves-effect indigo' onclick="googleLogin()">Login with Google</button>
+                                <button class='col s12 btn btn-large waves-effect indigo' onclick="googleLogin()">Login with Google</button>
                             </div>
                         </center>
                     </div>
@@ -122,27 +122,57 @@
                         <br />
                         <center>
                             <div class='row'>
-                                <button type='submit' class='col s12 btn btn-large waves-effect indigo' onclick=submit()>Submit</button>
+                                <button class='col s12 btn btn-large waves-effect indigo' onclick=submit()>Submit</button>
                             </div>
                         </center>
                     </div>
                 </div>
-                <div class="z-depth-1 grey lighten-4 row " style="display: inline-block; padding: 32px 48px 0px 48px; border: 1px solid #EEE; width:75% " id="login_div">
+                <div class="z-depth-1 grey lighten-4 row " style="display: none; padding: 32px 48px 0px 48px; border: 1px solid #EEE; width:75% " id="history_div">
                     <div class="col s12 ">
                         <center>
                             <div class='row'>
+                                <table id='history_table'>
+                                    <thead>
+                                        <tr>
+                                            <th>District/Pincode</th>
+                                            <th>LastUpdate</th>
+                                            <th>Total Centres</th>
+                                            <th>Open Centres</th>
+                                            <th>Last Message</th>
+                                        </tr>
+                                    </thead>
 
+                                    <tbody>
+                                        <tr>
+                                            <td>691507</td>
+                                            <td>01-12-2012</td>
+                                            <td>112</td>
+                                            <td>21</td>
+                                            <td>
+                                                <button class='modal-trigger btn btn-small waves-effect indigo' href='#modal1'>View</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </center>
                     </div>
                 </div>
             </div>
             </div>
-            <!-- <a href="#! ">Create account</a> -->
+            <!-- <a href=" #! ">Create account</a> -->
         </center>
 
         <div class="section "></div>
         <div class="section "></div>
+        <div id="modal1" class="modal">
+            <div class="modal-content">
+                <h4 id='modal_header'>Modal Header</h4>
+                <p id='modal_body'>A bunch of text</p>
+            </div>
+            <div class="modal-footer">
+                <a href="#!" class="modal-close waves-effect waves-green btn-flat">Agree</a>
+            </div>
+        </div>
     </main>
     <script type="text/javascript " src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.1/jquery.min.js "></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js "></script>
@@ -179,7 +209,7 @@
         };
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE)
+        // firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE)
 
         firebase.auth().getRedirectResult().then(function(result) {
             if (result.credential) {
@@ -219,6 +249,7 @@
                     'last_login': firebase.database.ServerValue.TIMESTAMP,
                 })
                 loginPostRun()
+                populateTable()
             } else {
                 console.log('not already logged in user')
                     // No user is signed in.
@@ -279,7 +310,7 @@
 
         function loginPostRun() {
             document.getElementById('login_div').style.display = 'None'
-            document.getElementById('welcome_text').innerHTML = "Select the district/pincode to auto-check."
+            document.getElementById('welcome_text').innerHTML = "Select the district/pincode to auto-check. "
             document.getElementById('selection_div').style.display = 'inherit'
             var state_sel = document.getElementById('state_sel')
             state_sel.innerHTML = ''
@@ -287,7 +318,7 @@
             option.setAttribute('value', ' ')
             option.setAttribute('disabled', 'true')
             option.setAttribute('selected', 'true')
-            option.text = "Choose the state"
+            option.text = "Choose the state "
             state_sel.appendChild(option)
             firebase.database().ref('states/').once('value').then((snapshot) => {
                 var state_dict = snapshot.val()
@@ -310,7 +341,7 @@
             option.setAttribute('value', ' ')
             option.setAttribute('disabled', 'true')
             option.setAttribute('selected', 'true')
-            option.text = "Choose the district"
+            option.text = "Choose the district "
             district_sel.appendChild(option)
             firebase.database().ref('state_to_district/' + state_code).once('value').then((snapshot) => {
                 var district_dict = snapshot.val()
@@ -325,26 +356,74 @@
         }
 
         function submit() {
-            var value = document.getElementById('district_sel').value;
-            if (value == ' ') {
+            var distric_sel = document.getElementById('district_sel')
+            var district_code = distric_sel.value;
+            if (district_code == ' ') {
                 return;
             }
+            var district_name = distric_sel.options[distric_sel.selectedIndex].text;
             var youngOnly = 'False';
             if (document.getElementById('under45_checkbox').checked) {
                 youngOnly = 'True';
             }
             var ref = firebase.database().ref('usersf/' + firebase.auth().currentUser.uid + '/');
-            console.log('Updating ' + value)
+            console.log('Updating ' + district_code);
             ref.update({
-                'district_code': value,
+                'district': district_name,
+                'district_code': district_code,
                 'youngOnly': youngOnly,
+                'last_msg_time': 'None',
+                'total_centres': 'None',
+                'open_centres': 'None',
             }).then(() => {
                 M.toast({
                     html: 'Submitted!'
                 })
             });
+        }
 
+        function populateTable() {
+            var ref = firebase.database().ref('usersf/' + firebase.auth().currentUser.uid + '/');
+            ref.on('value', (snapshot) => {
+                snapshot = snapshot.val()
+                var district_code = snapshot['district_code']
+                if (!district_code) {
+                    console.log('no d_code.')
+                    return
+                }
 
+                var district = snapshot['district']
+                document.getElementById('history_div').style.display = 'inline-block';
+                var last_update = snapshot['last_msg_time'];
+                if (last_update != 'None') {
+                    var d = new Date(last_update);
+                    var last_update = d.getDate() + ' / ' + (d.getMonth() + 1) + ' / ' + d.getFullYear() + ' ' + d.toLocaleTimeString();
+                }
+                var total_centres = snapshot['total_centres'];
+                var open_centres = snapshot['open_centres'];
+                if (last_update != 'None') {
+                    modal_body = document.getElementById('modal_body');
+                    modal_header = document.getElementById('modal_header');
+                    modal_body.innerHTML = snapshot['last_msg_body'];
+                    modal_header.innerHTML = snapshot['last_msg_title'];
+                    btn_html = "<button class='modal-trigger btn btn-small waves-effect indigo' href='#modal1'>View</button></td>";
+                } else {
+                    btn_html = "<button class='modal-trigger disabled btn btn-small waves-effect indigo' href='#modal1'>View</button></td>";
+                }
+                var table = document.getElementById('history_table').getElementsByTagName('tbody')[0];
+                $('#history_table tbody').empty();
+                var row = table.insertRow(-1);
+                var cell1 = row.insertCell(0);
+                var cell2 = row.insertCell(1);
+                var cell3 = row.insertCell(2);
+                var cell4 = row.insertCell(3);
+                var cell5 = row.insertCell(4);
+                cell1.innerHTML = district;
+                cell2.innerHTML = last_update;
+                cell3.innerHTML = total_centres;
+                cell4.innerHTML = open_centres;
+                cell5.innerHTML = btn_html
+            });
         }
     </script>
 </body>
