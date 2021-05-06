@@ -209,7 +209,7 @@
         };
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-        // firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE)
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE)
 
         firebase.auth().getRedirectResult().then(function(result) {
             if (result.credential) {
@@ -246,12 +246,12 @@
             if (user) {
                 console.log('already logged in user')
                 firebase.database().ref('usersf/' + user['uid']).update({
-                    'last_login': firebase.database.ServerValue.TIMESTAMP,
+                    'last_login_time': firebase.database.ServerValue.TIMESTAMP,
                 })
                 loginPostRun()
                 populateTable()
             } else {
-                console.log('not already logged in user')
+                console.log('no already logged in user')
                     // No user is signed in.
             }
         });
@@ -268,19 +268,23 @@
                     // The signed-in user info.
                     var user = result.user;
                     console.log('LOGIN SUCCESS');
+                    console.log(user.additionalUserInfo.isNewUser);
                     firebase.database().ref('usersf/' + user['uid']).update({
                         displayName: user['displayName'],
                         email: user['email'],
                         'last_login_time': firebase.database.ServerValue.TIMESTAMP,
+                        // 'new_user': 'True',
                     }, (error) => {
                         if (error) {
-                            console.log('glogin write fail')
+                            console.log('glogin write fail of new user')
                                 // The write failed...
                         } else {
-                            console.log('glogin write success')
+                            console.log('glogin write success of new user')
                                 // Data saved successfully!
                         }
                     });
+
+
                 }).catch(function(error) {
                     // Handle Errors here.
                     var errorCode = error.code;
@@ -289,7 +293,7 @@
                     var email = error.email;
                     // The firebase.auth.AuthCredential type that was used.
                     var credential = error.credential;
-                    console.log(errorCode + errorMessage)
+                    console.log('ERROR ' + errorCode + ' ' + errorMessage);
                 });
             }
         }
