@@ -26,7 +26,8 @@ class CowinParser:
         print("No of districts: ", len(self.total_district_dict))
         self.HEADERS = {
             "accept": "application/json",
-            "Accept-Language": "hi_IN"
+            "Accept-Language": "hi_IN",
+            "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
         }
     def get_centres_by_calendarBydistrict(self, district_id, date=datetime.datetime.now().strftime('%d-%m-%Y')):
         url = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id="
@@ -42,7 +43,7 @@ class CowinParser:
         return self.centres
     def process_states(self):
         url = "https://cdn-api.co-vin.in/api/v2/admin/location/states"
-        resp = requests.get(url)
+        resp = requests.get(url,  headers= self.HEADERS)
         if resp.status_code!=200:
             print('URL REQUEST FAIL.CODE: ',resp.status_code)
             return False
@@ -59,7 +60,7 @@ class CowinParser:
         self.state_to_district_dict = {}
         for state_name in self.states_dict:
             state_code = self.states_dict[state_name]
-            resp = requests.get(url+str(state_code))
+            resp = requests.get(url+str(state_code),  headers= self.HEADERS)
             if resp.status_code!=200:
                 print('URL REQUEST FAIL.CODE: ',resp.status_code)
                 return False
@@ -181,6 +182,7 @@ class PushBullet:
         for contact in self.contacts:
             if contact.email==email:
                 return contact
+        # print(self.contacts)        
         contact = self.pb.new_chat("NEW", email)
         self.pb.push_note('Registered to COWIN Cron Service', 'You will receive notifs if vaccine slots if any are found.', chat=contact)
         return contact        
@@ -198,7 +200,12 @@ class CronJob:
             email = each['email']
             print("Begin searching for ",email)
             searchBy = each["searchBy"]
-            if each["youngOnly"]:
+            if each['new_user']=='True':
+                msg_title = 'Welcome to CowinCron'
+                msg_body = 'This is the handle where you will receive a CowinCron alert message'
+                self.firebaseOperations.update_new_user_status(key)
+                self.pushBullet.send_msg_to_contact(email, msg_title, msg_body)
+            if each["youngOnly"]=='True':
                 youngOnly=True
             else:
                 youngOnly=False    
@@ -276,7 +283,12 @@ class FirebaseOperations:
         ref = db.reference('usersf')
         # print(ref.get())
         return(ref.get())
-
+    def update_new_user_status(self, key):
+        ref = db.reference('usersf/')  
+        # a= ref.order_by_child("email").equal_to(email).get()
+        # key = int(next(iter(a)))
+        ref.child(str(key)).update({"new_user":'False'})
+        return   
 c = CronJob()
 c.execute_one_check()
 

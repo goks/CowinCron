@@ -204,7 +204,7 @@
             databaseURL: "https://cowincron-default-rtdb.asia-southeast1.firebasedatabase.app/",
             projectId: "cowincron",
             // storageBucket: "cowincron.appspot.com",
-            // messagingSenderId: "1010981711077",
+            //messagingSenderId: "1010981711077",
             // appId: "1:845782377328:web:a01406c39d8f56ced365b5"
         };
         // Initialize Firebase
@@ -268,18 +268,33 @@
                     // The signed-in user info.
                     var user = result.user;
                     console.log('LOGIN SUCCESS');
-                    console.log(user.additionalUserInfo.isNewUser);
-                    firebase.database().ref('usersf/' + user['uid']).update({
+                    // console.log(user.additionalUserInfo.isNewUser);
+                    ref = firebase.database().ref('usersf/' + user['uid']);
+                    ref.once("value").then((snapshot) => {
+                        a = snapshot.val();
+                        if (!a['new_user']) {
+                            ref.update({
+                                'new_user': 'True',
+                            }, (error) => {
+                                if (error) {
+                                    console.log('new user write fail');
+                                } else {
+                                    console.log('new user write success');
+                                }
+                            });
+                        }
+                    });
+                    ref.update({
                         displayName: user['displayName'],
                         email: user['email'],
                         'last_login_time': firebase.database.ServerValue.TIMESTAMP,
                         // 'new_user': 'True',
                     }, (error) => {
                         if (error) {
-                            console.log('glogin write fail of new user')
+                            console.log('glogin write fail')
                                 // The write failed...
                         } else {
-                            console.log('glogin write success of new user')
+                            console.log('glogin write success ')
                                 // Data saved successfully!
                         }
                     });
@@ -401,6 +416,7 @@
                 document.getElementById('history_div').style.display = 'inline-block';
                 var last_update = snapshot['last_msg_time'];
                 if (last_update != 'None') {
+                    last_update = last_update * 1000;
                     var d = new Date(last_update);
                     var last_update = d.getDate() + ' / ' + (d.getMonth() + 1) + ' / ' + d.getFullYear() + ' ' + d.toLocaleTimeString();
                 }
