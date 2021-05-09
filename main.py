@@ -184,7 +184,7 @@ class PushBullet:
                 return contact
         # print(self.contacts)        
         contact = self.pb.new_chat("NEW", email)
-        self.pb.push_note('Registered to COWIN Cron Service', 'You will receive notifs if vaccine slots if any are found.', chat=contact)
+        # self.pb.push_note('Registered to COWIN Cron Service', 'You will receive notifs if vaccine slots if any are found.', chat=contact)
         return contact        
 
 class CronJob:
@@ -200,11 +200,18 @@ class CronJob:
             email = each['email']
             print("Begin searching for ",email)
             searchBy = each["searchBy"]
-            if each['new_user']=='True':
+            try:
+                if each['new_user']=='True':
+                    msg_title = 'Welcome to CowinCron'
+                    msg_body = 'This is the handle where you will receive a CowinCron alert message'
+                    self.firebaseOperations.update_new_user_status(key)
+                    self.pushBullet.send_msg_to_contact(email, msg_title, msg_body)
+            except KeyError:
                 msg_title = 'Welcome to CowinCron'
                 msg_body = 'This is the handle where you will receive a CowinCron alert message'
                 self.firebaseOperations.update_new_user_status(key)
                 self.pushBullet.send_msg_to_contact(email, msg_title, msg_body)
+
             if each["youngOnly"]=='True':
                 youngOnly=True
             else:
