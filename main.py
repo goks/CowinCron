@@ -40,7 +40,7 @@ class CowinParser:
         self.data = resp.json()
         print("No of centres: ", len(self.data["centers"]))
         self.centres = self.data["centers"]
-        return self.centres
+        return self.centres, resp.status_code
     def process_states(self):
         url = "https://cdn-api.co-vin.in/api/v2/admin/location/states"
         resp = requests.get(url,  headers= self.HEADERS)
@@ -199,7 +199,11 @@ class CronJob:
             each = self.data[key]
             email = each['email']
             print("Begin searching for ",email)
-            searchBy = each["searchBy"]
+            try:
+                searchBy = each["searchBy"]
+            except KeyError:
+                print('No searchby for ',email,' .Skipping.')
+                continue    
             try:
                 if each['new_user']=='True':
                     msg_title = 'Welcome to CowinCron'
@@ -234,14 +238,14 @@ class CronJob:
                 if not district_id:
                     print("Keyerror in state/district .Skipping")    
                     continue
-                centres = self.cowinParser.get_centres_by_calendarBydistrict(district_id)
+                centres, response_status_code = self.cowinParser.get_centres_by_calendarBydistrict(district_id)
                 no_of_centres = len(centres)
                 vaccinationCentreList = VaccinationCentreList()
                 vaccinationCentreList.process(centres, youngOnly)
                 vaccentreList = vaccinationCentreList.getVaccinationCentreList()
                 if vaccentreList == []:
-                    print(" No Vaccination centres for ", email)
-                    self.firebaseOperations.push_last_msg(key, email, "No Vaccination centres", '',count, no_of_centres, 0)
+                    print(" No Vaccination centres for ", email) 
+                    self.firebaseOperations.push_last_msg(key, email, "No Vaccination centres", 'Last response status code: ' + str(response_status_code),count, no_of_centres, 0)
                     continue
                 msg_body = ''
                 msg_title = 'Vaccination centres found at ' + district
@@ -300,5 +304,5 @@ c = CronJob()
 c.execute_one_check()
 
 scheduler = BlockingScheduler()
-scheduler.add_job(c.execute_one_check, 'interval', minutes=30)
+scheduler.add_job(c.execute_one_check, 'interval', minutes=10)
 scheduler.start()
