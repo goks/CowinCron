@@ -41,6 +41,19 @@ class CowinParser:
         print("No of centres: ", len(self.data["centers"]))
         self.centres = self.data["centers"]
         return self.centres, resp.status_code
+    def get_centres_by_findByDistrict(self, district_id, date=datetime.datetime.now().strftime('%d-%m-%Y')):
+        url = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id="
+        tail = str(district_id)+"&date="+str(date)
+        resp = requests.get(url + tail, headers= self.HEADERS)
+        print(url+tail)
+        if resp.status_code!=200:
+            print('URL REQUEST FAIL.CODE: ',resp.status_code)
+            return []
+        self.data = resp.json()
+        print("No of centres: ", len(self.data["sessions"]))
+        self.sessions = self.data["sessions"]
+        return self.sessions, resp.status_code
+
     def process_states(self):
         url = "https://cdn-api.co-vin.in/api/v2/admin/location/states"
         resp = requests.get(url,  headers= self.HEADERS)
@@ -152,17 +165,29 @@ class VaccinationCentreList:
             name = centre["name"]
             district_name = centre["district_name"]
             pincode = centre['pincode']
-            for session in centre["sessions"]:
-                available_capacity = session["available_capacity"]
+            try:
+                for session in centre["sessions"]:
+                    available_capacity = session["available_capacity"]
+                    if available_capacity<=0:
+                        continue
+                    min_age_limit = session["min_age_limit"]
+                    if youngOnly and min_age_limit>=45:
+                        continue
+                    vaccine = session["vaccine"]
+                    date = session['date']
+                    self.VaccinationCentreList.append( VaccinationCentre(centre_id, name, district_name, available_capacity, min_age_limit, vaccine, date, pincode))
+                    break
+            except KeyError:
+                available_capacity = centre['available_capacity']
                 if available_capacity<=0:
                     continue
-                min_age_limit = session["min_age_limit"]
+                min_age_limit = centre["min_age_limit"]
                 if youngOnly and min_age_limit>=45:
-                    continue
-                vaccine = session["vaccine"]
-                date = session['date']
+                        continue
+                vaccine = centre["vaccine"]
+                date = centre['date']    
                 self.VaccinationCentreList.append( VaccinationCentre(centre_id, name, district_name, available_capacity, min_age_limit, vaccine, date, pincode))
-                break
+        return     
     def getVaccinationCentreList(self):
         return self.VaccinationCentreList
     def __eq__(self, o: object):
@@ -256,7 +281,8 @@ class CronJob:
                     [centres,response_status_code] =history_dict[district_id]
                     print('fetched from history')
                 except KeyError:
-                    centres, response_status_code = self.cowinParser.get_centres_by_calendarBydistrict(district_id)
+                    # centres, response_status_code = self.cowinParser.get_centres_by_calendarBydistrict(district_id)
+                    centres, response_status_code = self.cowinParser.get_centres_by_findByDistrict(district_id)
                     if response_status_code == 200:
                         history_dict[district_id] = [centres,response_status_code]
                 no_of_centres = len(centres)
