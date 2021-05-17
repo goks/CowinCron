@@ -133,7 +133,7 @@ class VaccinationCentre:
         self.pincode = str(pincode)
         return
     def format_data(self):
-        txt = self.available_capacity + ' slots available at ' + self.name +' on '+ self.date +' at ' + self.pincode+'.\n'
+        txt = self.available_capacity + ' slots available at ' + self.name +' on '+ self.date +' at ' + self.pincode+'.\n Vaccine: ' + self.vaccine + '\n'
         print(txt)
         return txt
 
@@ -194,6 +194,7 @@ class CronJob:
         self.firebaseOperations = FirebaseOperations()
         return
     def execute_one_check(self):
+        history_dict = {}
         self.data = self.firebaseOperations.pull_data()
         for key in self.data:
             each = self.data[key]
@@ -238,7 +239,13 @@ class CronJob:
                 if not district_id:
                     print("Keyerror in state/district .Skipping")    
                     continue
-                centres, response_status_code = self.cowinParser.get_centres_by_calendarBydistrict(district_id)
+                try:
+                    [centres,response_status_code] =history_dict[district_id]
+                    print('fetched from history')
+                except KeyError:
+                    centres, response_status_code = self.cowinParser.get_centres_by_calendarBydistrict(district_id)
+                    if response_status_code == 200:
+                        history_dict[district_id] = [centres,response_status_code]
                 no_of_centres = len(centres)
                 vaccinationCentreList = VaccinationCentreList()
                 vaccinationCentreList.process(centres, youngOnly)
@@ -304,5 +311,5 @@ c = CronJob()
 c.execute_one_check()
 
 scheduler = BlockingScheduler()
-scheduler.add_job(c.execute_one_check, 'interval', minutes=10)
+scheduler.add_job(c.execute_one_check, 'interval', minutes=1)
 scheduler.start()
