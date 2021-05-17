@@ -133,15 +133,18 @@ class VaccinationCentre:
         self.pincode = str(pincode)
         return
     def format_data(self):
-        txt = self.available_capacity + ' slots available at ' + self.name +' on '+ self.date +' at ' + self.pincode+'.\n Vaccine: ' + self.vaccine + '\n'
+        txt = self.available_capacity + ' slots available at ' + self.name +' on '+ self.date +' at ' + self.pincode+'. (' + self.vaccine + ') \n'
         print(txt)
         return txt
-
+    def __eq__(self, o: object):
+        if isinstance(o, VaccinationCentre):
+            if self.centre_id==o.centre_id and self.available_capacity == o.available_capacity and self.date == o.date:
+                return True
+        return False
 
 class VaccinationCentreList:
     def __init__(self):
         self.VaccinationCentreList = []
-    
     def process(self, centres, youngOnly):
         self.VaccinationCentreList = []
         for centre in centres:
@@ -162,6 +165,15 @@ class VaccinationCentreList:
                 break
     def getVaccinationCentreList(self):
         return self.VaccinationCentreList
+    def __eq__(self, o: object):
+        if not isinstance(o, VaccinationCentreList):
+            return False
+        if len(o.VaccinationCentreList)!= len(self.VaccinationCentreList):
+            return False
+        for each in o.VaccinationCentreList:
+            if each not in self.VaccinationCentreList:
+                return False
+        return True      
 
 class PushBullet:
     def __init__(self):
@@ -185,13 +197,14 @@ class PushBullet:
         # print(self.contacts)        
         contact = self.pb.new_chat("NEW", email)
         # self.pb.push_note('Registered to COWIN Cron Service', 'You will receive notifs if vaccine slots if any are found.', chat=contact)
-        return contact        
+        return contact     
 
 class CronJob:
     def __init__(self, ):
         self.cowinParser=CowinParser()
         self.pushBullet = PushBullet()
         self.firebaseOperations = FirebaseOperations()
+        self.user_history = {}
         return
     def execute_one_check(self):
         history_dict = {}
@@ -250,6 +263,13 @@ class CronJob:
                 vaccinationCentreList = VaccinationCentreList()
                 vaccinationCentreList.process(centres, youngOnly)
                 vaccentreList = vaccinationCentreList.getVaccinationCentreList()
+                msg_already_sent = False
+                try:
+                    if self.user_history[email] == vaccinationCentreList:
+                        msg_already_sent = True
+                except:
+                    pass
+                self.user_history[email] = vaccinationCentreList
                 if vaccentreList == []:
                     print(" No Vaccination centres for ", email) 
                     self.firebaseOperations.push_last_msg(key, email, "No Vaccination centres", 'Last response status code: ' + str(response_status_code),count, no_of_centres, 0)
@@ -260,7 +280,10 @@ class CronJob:
                     msg_body+= centre.format_data()
                 count+=1    
                 self.firebaseOperations.push_last_msg(key, email, msg_title, msg_body,count,no_of_centres, len(vaccentreList))
-                status = self.pushBullet.send_msg_to_contact(email, msg_title, msg_body )
+                if not msg_already_sent:
+                    status = self.pushBullet.send_msg_to_contact(email, msg_title, msg_body )
+                else:
+                    print('Already notified. No new msg sent.')    
                 return
 
 class FirebaseOperations:
