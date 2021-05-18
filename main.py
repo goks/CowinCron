@@ -29,7 +29,8 @@ class CowinParser:
             "Accept-Language": "hi_IN",
             "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
         }
-    def get_centres_by_calendarBydistrict(self, district_id, date=datetime.datetime.now().strftime('%d-%m-%Y')):
+    def get_centres_by_calendarBydistrict(self, district_id):
+        date = datetime.datetime.now().strftime('%d-%m-%Y')
         url = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id="
         tail = str(district_id)+"&date="+str(date)
         resp = requests.get(url + tail, headers= self.HEADERS)
@@ -41,7 +42,8 @@ class CowinParser:
         print("No of centres: ", len(self.data["centers"]))
         self.centres = self.data["centers"]
         return self.centres, resp.status_code
-    def get_centres_by_findByDistrict(self, district_id, date=datetime.datetime.now().strftime('%d-%m-%Y')):
+    def get_centres_by_findByDistrict(self, district_id ):
+        date = datetime.datetime.now().strftime('%d-%m-%Y')
         url = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id="
         tail = str(district_id)+"&date="+str(date)
         resp = requests.get(url + tail, headers= self.HEADERS)
@@ -307,6 +309,7 @@ class CronJob:
                 count+=1    
                 self.firebaseOperations.push_last_msg(key, email, msg_title, msg_body,count,no_of_centres, len(vaccentreList))
                 if not msg_already_sent:
+                    print('Sending Message')
                     status = self.pushBullet.send_msg_to_contact(email, msg_title, msg_body )
                 else:
                     print('Already notified. No new msg sent.')    
